@@ -1,0 +1,130 @@
+<!doctype html>
+<title>ToDoアプリケーション</title>
+<script src="js/mithril.min.js"></script>
+<script>
+    //このアプリケーションはtodoコンポーネントのみを含む
+    var todo = {};
+    
+    //例をシンプルにするために、このコンポーネントをモデルクラスの名前空間として利用する
+    
+    //Todoクラスはプロパティを2つ持つ
+    todo.Todo = function(data) {
+        //m.propはgetter-setter関数を作るための、単純なファクトリ
+        this.description = m.prop(data.description);
+        this.done = m.prop(false);
+    };
+    
+    //TodoListクラスはTodoのリスト
+    todo.TodoList = Array;
+    
+    var myTask = new todo.Todo({description: 'コードを書く'});
+    
+    //descriptionを取得する
+    myTask.description();   //コードを書く
+    
+    //完了しているか？
+    var isDone = myTask.done(); //isDone == false
+    
+    //完了にする
+    myTask.done(true);  //true
+    
+    //ここでは完了している
+    isDone = myTask.done(); //isDone == true
+    
+    var list = new todo.TodoList();
+    list.length;    //0
+    
+    //ビュー・モデルの定義
+    todo.vm = {
+        init: function() {
+            //アクティブなTodoのリスト
+            todo.vm.list = new todo.TodoList();
+            
+            //新しいToDoを作成する前の、入力中のToDoの名前を保持するスロット
+            todo.vm.description = m.prop('');
+            
+            //ToDoリストを登録し、ユーザーが使いやすいようにdescriptionフィールドをクリアする
+            //todo.vm.add = function(description) {
+            //    if (description()) {
+            //        todo.vm.list.push(new todo.Todo({description: description()}));
+            //        todo.vm.description("");
+            //    }
+            //};
+            todo.vm.add = function() {
+                if (description()) {
+                    todo.vm.list.push(new todo.Todo({description: todo.vm.description()}));
+                    todo.vm.description("");
+                }
+            };
+        }
+    };
+    
+    //ビュー・モデルの初期化
+    todo.vm.init();
+    
+    todo.vm.description();  //[空文字列]
+    
+    //ToDoを登録してみる
+    todo.vm.add(todo.vm.description);
+    todo.vm.list.length;    //空のdescriptionは登録できないので、0
+    
+    //正しく登録できた
+    todo.vm.description('コードを書く');
+    todo.vm.add(todo.vm.description);
+    todo.vm.list.length;    //1
+    
+    todo.controller = function() {
+        todo.vm.init();
+    };
+    
+    todo.view = function() {
+        //m()が仮想DOMの要素を作成する
+        return m('html', [
+            m('body', [
+                //モデルの値と、テンプレート内のテキスト入力を結びつける
+                //m('input', {value: todo.vm.description()}),
+                //双方向バインディングを実現する場合
+                m('input', {onchange: m.withAttr('value', todo.vm.description), value: todo.vm.description()}),
+                //m('button', '追加'),
+                //m('button', {onclick: todo.vm.add.bind(todo.vm, todo.vm.description)}, '追加'),
+                m('button', {onclick: todo.vm.add}, '追加'),
+                m('table', [
+                    //m('tr', [
+                    //    m('td', [
+                    //        m('input[type=checkbox]')
+                    //    ]),
+                    //    m('td', タスクの説明)
+                    //])
+                    todo.vm.list.map(function(task, index){
+                       return m('tr', [
+                           m('td', [
+                               m('input[type=checkbox]', {onclick: m.withAttr('checked', task.done), checked: task.done()})
+                           ]),
+                           m('td', {style: {textDecoration: task.done() ? 'line-through' : 'none'}}, task.description())
+                       ]) 
+                    });
+                ])
+            ])
+        ]);
+    };
+    
+    //コードをテストする目的で表示する場合に、ビューをレンダリングする処理
+    //1回だけレンダリングするために使用する。自動再描画システムは利用できない。
+    //m.render(document, todo.view());    //「ルート要素」、「テンプレート」が引数
+
+    //自動再描画システムを利用する場合は、以下のいずれかの方法を使う
+    //・m.mountを使ってtodoコンポーネントを初期化する
+    //・m.routeを使ってラウト(route)を定義する
+    //※m.propのGetter・Setterに値を設定しても、再描画は走らない
+    //→モデルとテンプレートの結びつけを記述することで自動再描画が走る
+    //todo.vm.init();
+    //
+    //todo.vm.description();  //空文字列
+    //m.render(document, todo.view());    //テキスト入力もブランク
+    //
+    //todo.vm.description('コードを書く');  //ビュー・モデルのdescriptionに値を設定
+    //m.render(document, todo.view());    //テキスト入力に「コードを書く」が表示される
+    
+    //todoコンポーネントはdocument DOMノードの中でレンダリングする
+    m.mount(document, {controller: todo.controller, view: todo.view});
+</script>
